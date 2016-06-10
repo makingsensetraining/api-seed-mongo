@@ -10,7 +10,6 @@ import UserService from '../user/user.service';
 import Logger from '../../utils/logger';
 import ApiError from '../../errors/ApiError';
 import errors from '../../errors/errors';
-import Promise from 'bluebird';
 
 var validateJwt = expressJwt({
   secret: config.jwt.secret,

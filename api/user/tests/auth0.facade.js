@@ -1,7 +1,6 @@
 import auth0 from 'auth0';
 import config from '../config/environment';
 import jwt from 'jsonwebtoken';
-import Promise from 'bluebird';
 
 var AuthenticationClient = auth0.AuthenticationClient;
 var ManagementClient = auth0.ManagementClient;

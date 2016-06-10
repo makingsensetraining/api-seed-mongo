@@ -1,8 +1,16 @@
-import _ from 'lodash';
-import Promise from 'bluebird';
+'use-strict';
 
+// LIBRARIES
+import _ from 'lodash';
+import async from 'async';
+import mongoose from 'mongoose';
+let ObjectId = mongoose.Types.ObjectId;
+
+// MODEL
 import User from './user.model';
 import Role from './role.model';
+
+// SERVICE
 import UserAuth0Service from './user.auth0.service';
 
 // ERRORS
@@ -49,187 +57,243 @@ function validateUpdate(user) {
   return userValidations(user);
 }
 
-function getErrorLogToRemoveAuth0(auth0UserId, err) {
-  return ('error', `Auth0 - Dashboard - activity - DELETE. Auth0 User identifier "${auth0UserId}"`, err);
-}
-
 function isRequesterAdmin(requester) {
   return (requester.isAdmin || requester.role === 'admin');
 }
 
-function checkEmailAvailableToCreate(email) {
+function checkEmailAvailableToCreate(email, cb) {
   email = email.trim().toLowerCase();
 
-  return User
-    .where('email', email)
-    .fetchAll()
-    .then(users => {
-      return users.toJSON().length === 0;
-    });
+  User.countUsersByEmail(email, function(err, count){
+    if (err) {
+      return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+    }
+
+    return cb(null, count === 0);
+  });
 }
 
-function checkEmailAvailableToUpdate(email, id) {
+function checkEmailAvailableToUpdate(email, id, cb) {
+  // todo: refactoring this validation.
+  /*
   if (!email) {
     return Promise.resolve({'valid': true});
   }
-
+  */
   email = email.trim().toLowerCase();
 
-  return User
-    .where('email', email)
-    .where('id', '<>', id)
-    .fetchAll()
-    .then(users => {
-      return users.toJSON().length === 0;
-    });
+  User.checkEmailConsideringId(email, id, function(err, count) {
+    if (err) {
+      return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+    }
+
+    return cb(null, count === 0);
+  });
 }
 
-class UserService  {
+class UserService {
+  findById(id, cb) {
+    try {
+      new ObjectId(id);
+    } catch (err) {
+      return cb(new ApiError(errors.bad_request_400.invalid_user_id, null, err));
+    }
 
-  constructor() {
-    //super(User);
+    User.getUserById(id, false, function (err, user) {
+      /* istanbul ignore if */
+      if (err) {
+        return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+      }
+
+      if (!user) {
+        return cb(new ApiError(errors.not_found_404.user_not_found));
+      }
+
+      cb(null, user);
+    });
   }
 
-  /*
+  findByAuth0Id(id, cb) {
+    User.getUserByAuth0Id(id, function (err, user) {
+      if (err) {
+        return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+      }
 
-  findById(id) {
-      return User
-        .where('id', id)
-        .fetch({withRelated: ['role']})
-        .then(user => user && user.toJSON());
+      if (!user) {
+        return cb(new ApiError(errors.not_found_404.user_not_found));
+      }
+
+      cb(null, user);
+    });
   }
 
-  findByAuth0Id(id) {
-    return User
-      .where('auth_0_id', id)
-      .fetch({withRelated: ['role']})
-      .then(user => user && user.toJSON())
-      .catch(err=> {
-        console.log(err);
-      });
+  findByEmail(email, cb) {
+    User.getUserByEmail(email, function (err, user) {
+      if (err) {
+        return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+      }
+
+      if (!user) {
+        return cb(new ApiError(errors.not_found_404.user_not_found));
+      }
+
+      cb(null, user);
+    });
   }
 
-  findByEmail(email) {
-    return User
-      .where('email', email)
-      .fetch({withRelated: ['role', 'identities']})
-      .then(user => user && user.toJSON());
+  findAll(cb) {
+    User.getUsers(function (err, users) {
+      /* istanbul ignore if */
+      if (err) {
+        return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+      }
+
+      cb(null, users);
+    });
   }
 
-  findAll() {
-    return User
-      .where('status', 'active')
-      .fetchAll({withRelated: ['role']})
-      .then(models => models && models.toJSON());
-  }
-
-  update(user, changes, ctx = {}) {
+  update(userId, changes, ctx, cb) {
     var requester = ctx.requester;
 
     if (requester.status && requester.status !== 'active') {
-      return Promise.reject(new ApiError(errors.forbidden_403.user_permission_denied));
+      return cb(new ApiError(errors.forbidden_403.user_permission_denied));
     }
 
     changes = isRequesterAdmin(requester) ? sanitizeByAdmin(changes) : sanitize(changes);
-    user = _.omit(user, 'role');
 
     var hasError = validateUpdate(changes);
     if (hasError) {
-      return Promise.reject(hasError);
+      return cb(hasError);
     }
 
-    return checkEmailAvailableToUpdate(changes.email, user.id)
-      .then(res=> {
-        if (!res) {
-          return Promise.reject(new ApiError(errors.bad_request_400.user_email_used));
+    checkEmailAvailableToUpdate(changes.email, userId, function (err, res) {
+      if (!res) {
+        return cb(new ApiError(errors.bad_request_400.user_email_used));
+      }
+
+      User.findOne().where('_id').equals(userId).exec(function (err, dbUser) {
+        if (err) {
+          Logger.log('error', `[SERVICE] [USER] Error getting User`, {err, ctx, userId});
+          return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
         }
 
-        return super
-          .update(user, changes)
-          .tap(user => Logger.log('info', `[SERVICE] [USER] User with id: ${user.id} has been updated`, {changes}))
-          .then(user => this.findById(user.id))
-          .catch(function(err) {
-            Logger.log('error', `[SERVICE] [USER] Error updating User with id: ${user.id}`, {err, ctx});
-            return Promise.reject(new ApiError(errors.internal_server_error_500.server_error, null, err));
-          });
+        dbUser.set('firstName', changes.firstName);
+        dbUser.set('lastName', changes.lastName);
+
+        dbUser.save(function (err, dbUser) {
+          if (err) {
+            Logger.log('error', `[SERVICE] [USER] Error updating User with id: ${userId}`, {err, ctx});
+            return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+          }
+
+          Logger.log('info', `[SERVICE] [USER] User with id: ${userId} has been updated`, {changes});
+          return cb(null, dbUser.toObject());
+        });
       });
+    });
   }
 
-  create(newUser, ctx = {}) {
+  create(newUser, ctx, cb) {
+    console.log('111111 >');
+
+
     newUser = sanitize(newUser);
     newUser.roleId = 2; //user
     newUser.status = 'active';
 
+    // validations.
     var hasError = validate(newUser);
     if (hasError) {
-      return Promise.reject(hasError);
+      return cb(hasError);
     }
 
-    return checkEmailAvailableToCreate(newUser.email)
-      .then(res => {
-        if (!res) {
-          return Promise.reject(new ApiError(errors.bad_request_400.user_email_used));
+    async.waterfall([
+      // check email available.
+      function (callback) {
+        checkEmailAvailableToCreate(newUser.email, function (err, res) {
+          if (err) {
+            callback(err);
+          }
+
+          callback(null, res);
+        });
+      },
+      // user creation in Auth0.
+      function (emailAvailable, callback) {
+        if (!emailAvailable) {
+          return callback(new ApiError(errors.bad_request_400.user_email_used));
         }
 
-        return UserAuth0Service
-          .create(newUser).then(res => {
-            // remove this attribute because the authentication will be handle for auth0.
-            delete newUser.password;
-            newUser.auth0Id = res.user_id;
-
-            const user = User.forge(newUser);
-
-            return user
-              .save()
-              .then(user => user.toJSON())
-              .tap(user => Logger.log('info', `[SERVICE] [USER] User with id: ${user.id} has been created`, {
-                user,
-                ctx
-              }))
-              .catch(function(err) {
-                Logger.log('error', `[SERVICE] [USER] Error creating User`, {err, ctx, user});
-                return Promise.reject(new ApiError(errors.internal_server_error_500.server_error, null, err));
-              });
-
-          })
-          .catch(err=> {
+        UserAuth0Service.create(newUser, function (err, auth0User) {
+          if (err) {
             var error = _.cloneDeep(new ApiError(errors.bad_request_400.user_auth0_integration));
             error.message = error.message.concat(`Details here: ${err.message}`);
 
-            return Promise.reject(error);
-          });
-      });
+            return callback(error);
+          }
+
+          // remove this attribute because the authentication will be handle for auth0.
+          delete newUser.password;
+          newUser.auth0Id = auth0User.user_id;
+
+          const user = new User(newUser);
+
+
+          callback(null, user);
+        });
+      },
+      // user creation in the database.
+      function (user, callback) {
+        user.save(function (err, savedUser) {
+          if (err) {
+            Logger.log('error', `[SERVICE] [USER] Error creating User`, {err, ctx, newUser});
+            return callback(new ApiError(errors.internal_server_error_500.server_error, null, err));
+          }
+
+          Logger.log('info', `[SERVICE] [USER] User with id: ${user.id} has been created`, {savedUser, ctx});
+          callback(null, savedUser);
+        });
+      }
+    ], function (err, user) {
+      if (err) {
+        return cb(err);
+      }
+
+      cb(null, user);
+    });
   }
 
-  delete(id, ctx = {}) {
+  delete(id, ctx) {
     var requester = ctx.requester || {};
 
     if (requester && requester.status && requester.status !== 'active') {
-      return Promise.reject(new ApiError(errors.forbidden_403.user_permission_denied));
+      return cb(new ApiError(errors.forbidden_403.user_permission_denied));
     }
 
     if (!id) {
-      return Promise.reject(new ApiError(errors.bad_request_400.user_already_signed_up));
+      return cb(new ApiError(errors.bad_request_400.invalid_user_id));
     }
 
-    return this.findById(id)
-      .then(user=> {
-        return this.update(user, {'status': 'inactive'}, ctx)
-          .tap(user => {
-            Logger.log('info', `[SERVICE] [USER] User with id: ${user.id} has been set as inactive`)
-          })
-          .catch(function (err) {
-            Logger.log('error', `[SERVICE] [USER] Error trying to set inactive User with id: ${id}`, {
-              err,
-              ctx
-            });
+    User.findOne().where('_id').equals(id).exec(function (err, dbUser) {
+      if (err) {
+        Logger.log('error', `[SERVICE] [USER] Error getting User`, {err, ctx, id});
+        return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+      }
 
-            return Promise.reject(new ApiError(errors.internal_server_error_500.server_error, null, err));
-          });
+      dbUser.set('status', 'inactive');
+
+      dbUser.save(function (err, dbUser) {
+        if (err) {
+          Logger.log('error', `[SERVICE] [USER] Error trying to set inactive User with id: ${id}`, {err, ctx});
+          return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
+        }
+
+        Logger.log('info', `[SERVICE] [USER] User with id: ${id} has been set as inactive`);
+        return cb(null, dbUser.toObject());
       });
-  }
 
-*/
+    });
+  }
 }
 
 var userServiceSingleton = new UserService();

@@ -1,6 +1,5 @@
 'use strict';
 import _ from 'lodash';
-import Promise from 'bluebird';
 import auth0 from 'auth0';
 import config from '../../config/environment';
 
@@ -15,16 +14,22 @@ class UserAuth0Service {
     });
   }
 
-  create(user) {
+  create(user, cb) {
     if (!user.email || !user.password) {
-      return Promise.reject(new Error('Invalid user, must have an email and a password'));
+      //return Promise.reject(new Error('Invalid user, must have an email and a password'));
     }
+
     var userData = _.pick(user, 'email', 'password', 'name');
     userData.connection = 'Username-Password-Authentication';
-    return this
-      .managementClient
-      .users
-      .create(userData);
+
+    this.managementClient.users.create(userData, function(err, userCreated){
+      if (err) {
+        //return callback(new ApiError(errors.internal_server_error_500.server_error, null, err));
+        cb(err);
+      }
+
+      return cb(null, userCreated);
+    });
   }
 }
 

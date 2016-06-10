@@ -15,12 +15,14 @@ class UserController {
    * restriction: 'admin'
    */
   index(req, res, next) {
-    return UserService
-      .findAll()
-      .then(users => {
-        res.status(200).json({users});
-      })
-      .catch(next);
+    UserService.findAll(function(err, users){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      res.status(200).json({users});
+    });
   }
 
   /**
@@ -30,12 +32,14 @@ class UserController {
     var user = req.body;
     var ctx = req.ctx;
 
-    return UserService
-      .create(user, ctx)
-      .then(function(user) {
-        res.status(201).json({user});
-      })
-      .catch(next);
+    UserService.create(user, ctx, function(err, user){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      res.status(201).json({user});
+    });
   }
 
   /**
@@ -45,14 +49,17 @@ class UserController {
     var user = req.user;
     var changes = req.body;
     var ctx = req.ctx;
+
     ctx.requester = user;
 
-    UserService
-      .update(user, changes, ctx)
-      .then(function(updatedUser) {
-        res.json({user: updatedUser});
-      })
-      .catch(next);
+    UserService.update(user, changes, ctx, function(err, updatedUser){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      res.json({user: updatedUser});
+    });
   }
 
   /**
@@ -77,20 +84,24 @@ class UserController {
 
     id = Number(id);
 
+    /*
     if (user.id !== id && !user.isAdmin) {
       return next(new ApiError(errors.forbidden_403.user_permission_denied));
     }
+    */
 
-    return UserService
-      .findById(id)
-      .tap(function(user) {
-        if (!user) {
-          throw new ApiError(errors.not_found_404.user_not_found);
-        }
-      })
-      .then(user => {
-        res.status(201).json({user});
-      });
+    UserService.findById(id, function(err,user){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      if (!user) {
+        throw new ApiError(errors.not_found_404.user_not_found);
+      }
+
+      res.status(201).json({user});
+    });
   }
 
   /**
@@ -103,12 +114,14 @@ class UserController {
 
     ctx.requester = req.user;
 
-    return UserService
-      .delete(id, ctx)
-      .then(function(user) {
-        res.status(204).json({user});
-      })
-      .catch(next);
+    UserService.delete(id, ctx, function(err){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      res.status(204).json({user});
+    });
   }
 }
 
