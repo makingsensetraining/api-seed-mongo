@@ -11,8 +11,7 @@ xdescribe('[API] [Users]', function() {
   var user;
 
   function clearUserDatabase() {
-        return knex('users').del()
-          .catch(logAndThrow);
+    //todo: remove users.
   };
 
   function logAndThrow(err) {

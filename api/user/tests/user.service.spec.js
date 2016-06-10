@@ -26,7 +26,7 @@ xdescribe('[Service] [Users]', function() {
   beforeEach(genUser);
 
   afterEach(function clearDatabase() {
-    return knex('users').del();
+    //todo: remove.
   });
 
   it('should create users', function() {

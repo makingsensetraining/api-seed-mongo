@@ -15,7 +15,7 @@ let userSchema = new Schema({
   phone    : String,
   status   : String,
   auth0Id  : String,
-  _roleId  :{type: Schema.Types.ObjectId, ref: 'User'}
+  _roleId  :{type: Schema.Types.ObjectId, ref: 'Role'}
 });
 
 userSchema.statics.getUserById = function(id, lean, cb){
@@ -29,7 +29,6 @@ userSchema.statics.getUserById = function(id, lean, cb){
 
   query.exec(cb);
 };
-
 
 userSchema.statics.getUserByAuth0Id = function(id, lean, cb){
   let query = this.model('User')

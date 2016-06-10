@@ -19,26 +19,26 @@ xdescribe('[Model] [Users]', function() {
   beforeEach(genUser);
 
   afterEach(function() {
-    return knex('users').del();
+    User.remove({}, cb);
   });
 
   it('should begin with no users', function() {
-    var allUsers = User.fetchAll();
-    allUsers.then(function(users) {
-      return users.toJSON();
-    });
-    return expect(allUsers).to.eventually.have.length(0);
+    var allUsers = User.getUsers();
+    allUsers.should.have.length(0);
   });
 
   it('should allow you to save a user with minimal information', function() {
-    var allUsers = user
-      .save()
-      .then(function() {
-        return User.fetchAll();
-      })
-      .then(users => users.toJSON());
+    const user = new User(new {
+          firstName: "john",
+          userName: "bill"
+    });
 
-    return expect(allUsers).to.eventually.have.length(1);
+    user.save(function(err){
+      //todo: check the error using a should.
+
+      var allUsers = User.getUsers();
+      allUsers.should.have.length(1);
+    });
   });
 
   it('should fail when saving a duplicate user', function() {

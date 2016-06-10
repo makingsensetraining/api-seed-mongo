@@ -194,9 +194,6 @@ class UserService {
   }
 
   create(newUser, ctx, cb) {
-    console.log('111111 >');
-
-
     newUser = sanitize(newUser);
     newUser.roleId = 2; //user
     newUser.status = 'active';
@@ -237,7 +234,6 @@ class UserService {
           newUser.auth0Id = auth0User.user_id;
 
           const user = new User(newUser);
-
 
           callback(null, user);
         });
