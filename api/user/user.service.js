@@ -114,7 +114,7 @@ class UserService {
   }
 
   findByAuth0Id(id, cb) {
-    User.getUserByAuth0Id(id, function (err, user) {
+    User.getUserByAuth0Id(id, false, function (err, user) {
       if (err) {
         return cb(new ApiError(errors.internal_server_error_500.server_error, null, err));
       }

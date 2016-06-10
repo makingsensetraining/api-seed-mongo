@@ -49,7 +49,7 @@ userSchema.statics.getUserByEmail = function(email, cb){
     .exec(cb);
 };
 
-userSchema.statics.getUsers = function(email, cb){
+userSchema.statics.getUsers = function(cb){
   this.model('User').find()
     .exec(cb);
 };

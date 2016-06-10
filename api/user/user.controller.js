@@ -78,15 +78,9 @@ class UserController {
       id = user.id;
     }
 
-    if (isNaN(id)) {
-      return next(new ApiError(errors.bad_request_400.invalid_user_id));
-    }
-
-    id = Number(id);
-
     /*
     if (user.id !== id && !user.isAdmin) {
-      return next(new ApiError(errors.forbidden_403.user_permission_denied));
+      return next(new ApiError(errors.foridden_403.user_permission_denied));
     }
     */
 

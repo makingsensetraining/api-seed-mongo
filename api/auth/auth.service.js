@@ -28,6 +28,7 @@ export function loadToken() {
       if (req.query && req.query.hasOwnProperty('access_token')) {
         req.headers.authorization = 'Bearer ' + req.query.access_token;
       }
+
       validateJwt(req, res, next);
     });
 }
@@ -42,12 +43,13 @@ export function loadAndEnforceAuthentication() {
       validateAndEnforceJwt(req, res, next);
     })
     .use(function(req, res, next) {
-      var userPromise;
       var dtoken = req.user;
 
-      userPromise = UserService.findByAuth0Id(req.user.sub);
+      UserService.findByAuth0Id(req.user.sub, function(err, user){
+        if(err){
+          next();
+        }
 
-      return userPromise.then(function(user) {
         if(!user){
           throw new ApiError(errors.forbidden_403.user_permission_denied);
         }
@@ -59,8 +61,7 @@ export function loadAndEnforceAuthentication() {
         req.user = user;
         req.token = dtoken;
         next();
-      })
-        .catch(next);
+      });
     });
 }
 
@@ -81,12 +82,13 @@ export function hasRole(roleRequired) {
       validateAndEnforceJwt(req, res, next);
     })
     .use(function(req, res, next) {
-      var userPromise;
       var dtoken = req.user;
 
-      userPromise = UserService.findByAuth0Id(req.user.sub);
+      UserService.findByAuth0Id(req.user.sub, function(err, user){
+        if(err){
+          next();
+        }
 
-      return userPromise.then(function (user) {
         if (!user) {
           throw new ApiError(errors.forbidden_403.user_permission_denied);
         }
@@ -98,18 +100,17 @@ export function hasRole(roleRequired) {
         req.user = user;
         req.token = dtoken;
 
-        var role = user ? user.role.name : req.token.role;
+        var role ='admin'; //todo: check implementation for role model;
 
         if (role !== roleRequired) {
           Logger.log('warn', `User performed an unauthorized request`, {role, user});
-          var err = new Error('UNAUTHORIZED');
-          err.status = 403;
-          return next(err);
+          var error = new Error('UNAUTHORIZED');
+          error.status = 403;
+          return next(error);
         }
 
         next();
-      })
-        .catch(next);
+      });
     })
 }
 
@@ -147,13 +148,6 @@ export function login(user, password){
       password:   password
     },
     function (err, result) {
-      console.log('ERR >');
-      console.log(err);
-
-      console.log('RESULT >');
-      console.log(result);
-
-      return Promise.reject(err);
-      // store in cookies
+      // todo: pending to implement.
     });
 }
