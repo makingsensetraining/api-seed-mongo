@@ -3,6 +3,9 @@
 import app from '../../..';
 import User from './../user.model.js';
 
+// ERRORS.
+import errors from '../../../errors/errors';
+
 var user;
 
 var genUser = function() {
@@ -15,81 +18,35 @@ var genUser = function() {
   return user;
 };
 
-xdescribe('[Model] [Users]', function() {
+describe('[Model] [Users]', function() {
   beforeEach(genUser);
 
   afterEach(function() {
-    User.remove({}, cb);
+    User.remove({});
   });
 
   it('should begin with no users', function() {
-    var allUsers = User.getUsers();
-    allUsers.should.have.length(0);
+    User.getUsers(function(err, users){
+      users.should.have.length(0);
+    });
   });
 
   it('should allow you to save a user with minimal information', function() {
-    const user = new User(new {
-          firstName: "john",
-          userName: "bill"
-    });
-
-    user.save(function(err){
-      //todo: check the error using a should.
-
-      var allUsers = User.getUsers();
-      allUsers.should.have.length(1);
-    });
-  });
-
-  it('should fail when saving a duplicate user', function() {
-    var duplicates = user
-      .save()
-      .then(function() {
-        var userDup = genUser();
-        return userDup.save();
+        const user = new User({
+        firstName: "john",
+        userName: "bill",
+        email: "jhon.bill@mail.com"
       });
 
-    return expect(duplicates).to.be.rejected;
+      user.save(function(err, userSaved) {
+        should.not.exist(err);
+        should.exist(userSaved);
+
+        User.getUsers(function (err, users) {
+          users.should.have.length(1);
+        });
+      });
+
   });
 
-  describe('#email', function() {
-    it('should not allow you to save a user without an email', function() {
-      user.email = '';
-      return user
-        .save()
-        .then(function() {
-          throw new Error('Should not save user without an email');
-        })
-        .catch(function(err) {
-          expect(err.errors.email).to.exist;
-        });
-    });
-
-    it('should not allow you to save a user with an invalid email', function() {
-      user.email = 'my@';
-      return user
-        .save()
-        .then(function() {
-          throw new Error('Should not save user without an email');
-        })
-        .catch(function(err) {
-          expect(err.errors.email).to.exist;
-        });
-    });
-  });
-
-  describe('#name', function() {
-    it('should not allow you to save a user without a name', function() {
-      user.firstName = '';
-
-      return user
-        .save()
-        .then(function() {
-          throw new Error('Should not save user without a firstName');
-        })
-        .catch(function(err) {
-          expect(err.errors).to.exist;
-        });
-    });
-  });
 });

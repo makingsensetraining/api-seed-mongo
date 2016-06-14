@@ -3,9 +3,10 @@
 import app from '../../..';
 import UserService from './../user.service.js';
 
-var user, requestUser;
-function genUser() {
-  user = {
+// ERRORS
+import errors from '../../../errors/errors';
+function getUser() {
+  let user = {
     firstName: 'User',
     lastName: 'Test',
     email: getRandomEmail(),
@@ -19,82 +20,72 @@ function getRandomEmail(){
   return `${Math.random().toString(36).substring(7)}@test.com`;
 };
 
-xdescribe('[Service] [Users]', function() {
-
-  this.timeout(10000);
-
-  beforeEach(genUser);
-
-  afterEach(function clearDatabase() {
-    //todo: remove.
-  });
+describe('[Service] [Users]', function() {
 
   it('should create users', function() {
-    var allUsers = UserService
-      .create(user)
-      .then(function() {
-        return UserService.findAll();
-      });
+    const user = getUser();
 
-    return expect(allUsers).to.eventually.have.length(1);
+    UserService.create(user, null, function(err, userCreated){
+      UserService.findAll(function(err, users){
+        users.length.should.equal(1);
+      });
+    });
   });
 
   it('should create users with a phone number valid', function() {
+    const user = getUser();
     user.phone = '+1 650-253-0000';
 
-    var allUsers = UserService
-      .create(user)
-      .then(function() {
-        return UserService.findAll();
+    UserService.create(user, null, function(err, userCreated){
+      UserService.findAll(function(err, users){
+        users.length.should.equal(1);
       });
-    return expect(allUsers).to.eventually.have.length(1);
+    });
   });
 
   it('should not allow you to create users without a valid email', function() {
+    const user = getUser();
     delete user.email;
-    return UserService
-      .create(user)
-      .then(() => {
-        throw new Error('should not have saved user')
-      })
-      .catch(err => UserService.findAll())
-      .then(users => expect(users).to.have.length(0));
+
+    UserService.create(user, null, function(err){
+      err.message.should.equal(errors.bad_request_400.invalid_email.message);
+    });
   });
 
   it('should not allow you to create users without a first name', function() {
+    const user = getUser();
     delete user.firstName;
 
-    return UserService
-      .create(user)
-      .then(() => {
-        throw new Error('should not have saved user')
-      })
-      .catch(err => UserService.findAll())
-      .then(users => expect(users).to.have.length(0));
+    UserService.create(user, null, function(err){
+      err.message.should.equal(errors.bad_request_400.invalid_first_name.message);
+    });
+  });
+
+  it('should not allow you to create users without a first name', function() {
+    const user = getUser();
+    delete user.lastName;
+
+    UserService.create(user, null, function(err){
+      err.message.should.equal(errors.bad_request_400.invalid_last_name.message);
+    });
   });
 
   it('should not allow you to create users with a phone number < 2 chars', function() {
+    const user = getUser();
     user.phone = '1';
 
-    return UserService
-      .create(user)
-      .then(() => {
-        throw new Error('should not have saved user')
-      })
-      .catch(err => UserService.findAll())
-      .then(users => expect(users).to.have.length(0));
+    UserService.create(user, null, function(err, userCreated){
+      err.message.should.equal(errors.bad_request_400.invalid_phone.message);
+    });
   });
 
   it('should not allow you to create users with a phone number > 45 chars', function() {
+    const user = getUser();
     user.phone = '12300029291929394944 292929291 939393333333 9944494949494949494900000';
 
-    return UserService
-      .create(user)
-      .then(() => {
-        throw new Error('should not have saved user')
-      })
-      .catch(err => UserService.findAll())
-      .then(users => expect(users).to.have.length(0));
+    UserService.create(user, null, function(err, userCreated){
+      err.message.should.equal(errors.bad_request_400.invalid_phone.message);
+    });
   });
 
 });

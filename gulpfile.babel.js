@@ -9,6 +9,7 @@ import lazypipe from 'lazypipe';
 import nodemon from 'nodemon';
 import runSequence from 'run-sequence';
 import {Instrumenter} from 'isparta';
+import exec from 'gulp-exec';
 
 var plugins = gulpLoadPlugins();
 var config;
@@ -68,6 +69,16 @@ function sortModulesFirst(a, b) {
     return 0;
   } else {
     return (aMod ? -1 : 1);
+  }
+}
+
+function runCommand(command) {
+  return function (cb) {
+    exec(command, function (err, stdout, stderr) {
+      console.log(stdout);
+      console.log(stderr);
+      cb(err);
+    });
   }
 }
 
@@ -206,34 +217,37 @@ gulp.task('migrate:test', () => {
     ssl: process.env.DB_SSL === 'true',
     charset: 'utf8'
   };
-  var knex = require('knex')({
-    client: 'pg',
-    connection: connection,
-    debug: process.env.DATABASE_DEBUG === 'true'
-  });
-
-  return knex
-    .migrate.latest({database: connection.database, directory: './data-model/migrations'})
-    .then(function() {
-      return knex.seed.run({directory: './data-model/seeds'});
-    })
-    .then(() => knex.destroy());
 });
 
 gulp.task('test:api', cb => {
   var env = process.env.NODE_ENV;
 
-  console.log(env);
   if (env !== 'development' && env !== 'test') {
     console.log("Skipping tests in production, we don't want to wipe out the prod db do we?");
     return cb();
   }
 
   runSequence(
+    'mongo:stop',
+    'mongo:start',
+    'app:start',
     'migrate:test',
     'mocha:unit',
     //'mocha:integration',
+    'mongo:stop',
     cb);
+});
+
+gulp.task('mongo:start', () => {
+  runCommand('mongod --dbpath ./data/')
+});
+
+gulp.task('app:start', () => {
+  runCommand('node app.js')
+});
+
+gulp.task('mongo:stop', () => {
+  runCommand('mongo --eval "use admin; db.shutdownServer();"')
 });
 
 gulp.task('mocha:unit', () => {

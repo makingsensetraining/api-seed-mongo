@@ -7,30 +7,27 @@ import Auth0Facade from 'auth0.facade.js';
 // ERRORS
 import errors from '../../../errors/errors';
 
-xdescribe('[API] [Users]', function() {
+describe('[API] [Users]', function() {
   var user;
 
-  function clearUserDatabase() {
-    //todo: remove users.
-  };
+  function getUser() {
+    let user = {
+      firstName: 'User',
+      lastName: 'Test',
+      email: getRandomEmail(),
+      password: '123456'
+    };
 
-  function logAndThrow(err) {
-    console.error(err);
-    throw err;
-  }
+    return user;
+  };
 
   function getRandomEmail(){
     return `${Math.random().toString(36).substring(7)}@test.com`;
   }
 
-  // Clear users after testing
-  before(clearUserDatabase);
-
   describe('[CREATE]', function() {
 
     describe('[SUCCESSFUL]', function() {
-      before(clearUserDatabase);
-
       it('should allow an user to complete his registration', function() {
         const email = getRandomEmail();
 
@@ -163,7 +160,7 @@ xdescribe('[API] [Users]', function() {
 
   });
 
-  xdescribe('[UNAUTHENTICATED]', function() {
+  describe('[UNAUTHENTICATED]', function() {
 
     describe('[RETRIEVE]', function() {
       it('should not allow any user to query the API unless they are logged in', function() {
@@ -183,7 +180,7 @@ xdescribe('[API] [Users]', function() {
       it('should not allow an unauthenticated user to complete his registration', function() {
         return request(app)
           .post(`/api/users`)
-          .send({})
+          .send({email: email, firstName: 'user', lastName: '01', password: '123456'})
           .expect(401);
       });
     });
@@ -192,14 +189,14 @@ xdescribe('[API] [Users]', function() {
       it('should not allow an unauthenticated user to update users', function() {
         return request(app)
           .put(`/api/users/5`)
-          .send({})
+          .send({email: email, firstName: 'user', lastName: '01', password: '123456'})
           .expect(401);
       });
     });
 
   });
 
-  describe('[AUTHENTICATED USER]', function() {
+  xdescribe('[AUTHENTICATED USER]', function() {
 
   });
 
