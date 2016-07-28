@@ -12,6 +12,8 @@ router.use((req, res, next) => {
 });
 
 router.use('/users', require('./user'));
+router.use('/blog', require('./blog'));
 //router.use('/auth', require('./auth'));
 
+router.get('/juampi', (req, res) => { res.json(200, { test: 'this is an awesome test'})});
 module.exports = router;
