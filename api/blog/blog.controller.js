@@ -10,9 +10,9 @@ import ApiError from '../../errors/ApiError';
 import errors from '../../errors/errors';
 
 class BlogController {
+
   /**
-   * Get list of users
-   * restriction: 'admin'
+   * Get list of posts
    */
   index(req, res, next) {
     BlogService.findAll(function(err, posts){
@@ -25,98 +25,82 @@ class BlogController {
     });
   }
 
-  // /**
-  //  * Creates a new user
-  //  */
-  // create(req, res, next) {
-  //   var user = req.body;
-  //   var ctx = req.ctx;
-  //
-  //   UserService.create(user, ctx, function(err, user){
-  //     if (err) {
-  //       err.setReq(req);
-  //       return next(err);
-  //     }
-  //
-  //     res.status(201).json({user});
-  //   });
-  // }
-  //
-  // /**
-  //  * Updates a single user
-  //  */
-  // update(req, res, next) {
-  //   var user = req.user;
-  //   var changes = req.body;
-  //   var ctx = req.ctx;
-  //
-  //   ctx.requester = user;
-  //
-  //   UserService.update(user, changes, ctx, function(err, updatedUser){
-  //     if (err) {
-  //       err.setReq(req);
-  //       return next(err);
-  //     }
-  //
-  //     res.json({user: updatedUser});
-  //   });
-  // }
-  //
-  // /**
-  //  * Get a single user
-  //  */
-  // show(req, res, next) {
-  //   const user = req.user;
-  //   const token = req.token;
-  //   let id = req.params.user;
-  //
-  //   if (id === 'self' || id === 'me') {
-  //     if (token && !user) { //user is authenticated but not registered
-  //       return next(new ApiError(errors.not_found_404.user_not_signed_up));
-  //     }
-  //
-  //     id = user.id;
-  //   }
-  //
-  //   /*
-  //    if (user.id !== id && !user.isAdmin) {
-  //    return next(new ApiError(errors.foridden_403.user_permission_denied));
-  //    }
-  //    */
-  //
-  //   UserService.findById(id, function(err,user){
-  //     if (err) {
-  //       err.setReq(req);
-  //       return next(err);
-  //     }
-  //
-  //     if (!user) {
-  //       throw new ApiError(errors.not_found_404.user_not_found);
-  //     }
-  //
-  //     res.status(201).json({user});
-  //   });
-  // }
-  //
-  // /**
-  //  * Deletes a user
-  //  * restriction: 'admin'
-  //  */
-  // destroy(req, res, next) {
-  //   const ctx = req.ctx;
-  //   const id = req.params.id;
-  //
-  //   ctx.requester = req.user;
-  //
-  //   UserService.delete(id, ctx, function(err){
-  //     if (err) {
-  //       err.setReq(req);
-  //       return next(err);
-  //     }
-  //
-  //     res.status(204).json({user});
-  //   });
-  // }
+  /**
+   * Get a single post by ID
+   */
+  show(req, res, next) {
+    let id = req.params.post;
+
+    BlogService.findById(id, function(err,post){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      if (!post) {
+        throw new ApiError(errors.not_found_404.user_not_found);
+      }
+
+      res.status(201).json({post});
+    });
+  }
+
+  /**
+   * Creates a new post
+   */
+  create(req, res, next) {
+    var post = req.body;
+    var ctx = req.ctx;
+
+    BlogService.create(post, ctx, function(err, post){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      res.status(201).json({post});
+    });
+  }
+
+  /**
+   * Deletes a post
+   */
+  destroy(req, res, next) {
+    const ctx = req.ctx;
+    const id = req.params.post;
+
+    ctx.requester = req.post;
+
+    BlogService.delete(id, ctx, function(err, ret){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      res.status(204).json({ status: ret });
+    });
+  }
+
+  /**
+   * Updates a single post
+   */
+  update(req, res, next) {
+    var post = req.params.post;
+    var changes = req.body;
+    var ctx = req.ctx;
+
+    ctx.requester = post;
+
+    BlogService.update(post, changes, ctx, function(err, updatedPost){
+      if (err) {
+        err.setReq(req);
+        return next(err);
+      }
+
+      res.json({post: updatedPost});
+    });
+  }
+
 }
 
 var blogController = new BlogController();
