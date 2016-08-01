@@ -6,8 +6,6 @@
 import BlogService from './blog.service';
 
 // ERRORS
-import ApiError from '../../errors/ApiError';
-import errors from '../../errors/errors';
 
 class BlogController {
 
@@ -38,7 +36,8 @@ class BlogController {
       }
 
       if (!post) {
-        throw new ApiError(errors.not_found_404.user_not_found);
+        err.setReq(req);
+        return next(err);
       }
 
       res.status(201).json({post});

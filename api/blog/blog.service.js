@@ -2,8 +2,6 @@
 
 // LIBRARIES
 import _ from 'lodash';
-import async from 'async';
-import mongoose from 'mongoose';
 
 // MODEL
 import Post from './post.model';
@@ -15,32 +13,20 @@ import ApiError from '../../errors/ApiError';
 import errors from '../../errors/errors';
 
 // HELPERS
-import {validations, validationsToUpdate, userValidations} from '../../utils/validations.helper';
+import {postValidations} from '../../utils/validations.helper';
 
 // UTILS
-import Logger from '../../utils/logger';
 
-// const SANITIZE_FIELDS = ['firstName', 'lastName', 'phone', 'email', 'password'];
-//
-// function sanitize(user) {
-//   return _.pick(_.cloneDeep(user), SANITIZE_FIELDS);
-// }
-//
-// function sanitizeByAdmin(user) {
-//   return _.pick(_.cloneDeep(user), SANITIZE_FIELDS.concat(['role', 'status']));
-// }
+const SANITIZE_FIELDS = ['title', 'text'];
 
-// function validate(user) {
-//   // firstly check common validations.
-//   var error = validations(user);
-//
-//   if (error) {
-//     return error;
-//   }
-//
-//   // later user validations.
-//   return userValidations(user);
-// }
+function sanitize(post) {
+  return _.pick(_.cloneDeep(post), SANITIZE_FIELDS);
+}
+
+function validate(post) {
+  // Post validations.
+  return postValidations(post);
+}
 
 class BlogService {
 
@@ -63,7 +49,7 @@ class BlogService {
       }
 
       if (!post) {
-        return cb(new ApiError(errors.not_found_404.user_not_found));
+        return cb(new ApiError(errors.not_found_404.post_not_found));
       }
 
       cb(null, post);
@@ -71,14 +57,13 @@ class BlogService {
   }
 
   create(post, ctx, cb) {
-    // newPost = sanitize(newPost);
-    //id ? ToDo: check!
+    post = sanitize(post);
 
-    // // validations.
-    // var hasError = validate(newUser);
-    // if (hasError) {
-    //   return cb(hasError);
-    // }
+    // validations.
+    var hasError = validate(post);
+    if (hasError) {
+      return cb(hasError);
+    }
 
     var newPost = new Post({
       title: post.title,
@@ -94,10 +79,8 @@ class BlogService {
   }
 
   delete(id, ctx, cb) {
-    var requester = ctx.requester || {};
-
     if (!id) {
-      return cb(new ApiError(errors.bad_request_400.invalid_user_id));
+      return cb(new ApiError(errors.bad_request_400.invalid_post_id));
     }
 
     Post.getPostById(id, false, function (err, post) {
@@ -107,7 +90,7 @@ class BlogService {
       }
 
       if (!post) {
-        return cb(new ApiError(errors.not_found_404.user_not_found));
+        return cb(new ApiError(errors.not_found_404.post_not_found));
       }
 
       Post.remove({ _id: id}, function(err){
@@ -122,17 +105,15 @@ class BlogService {
 
 
   update(postId, changes, ctx, cb) {
-    var requester = ctx.requester;
+    sanitize(changes);
 
-    // sanitize(changes);
-
-    // var hasError = validateUpdate(changes);
-    // if (hasError) {
-    //   return cb(hasError);
-    // }
+    var hasError = validate(changes);
+    if (hasError) {
+      return cb(hasError);
+    }
 
     if (!postId) {
-      return cb(new ApiError(errors.bad_request_400.invalid_user_id));
+      return cb(new ApiError(errors.bad_request_400.invalid_post_id));
     }
 
     Post.getPostById(postId, false, function (err, post) {
@@ -142,7 +123,7 @@ class BlogService {
       }
 
       if (!post) {
-        return cb(new ApiError(errors.not_found_404.user_not_found));
+        return cb(new ApiError(errors.not_found_404.post_not_found));
       }
 
       post.set('title', changes.title);

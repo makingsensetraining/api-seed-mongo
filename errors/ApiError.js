@@ -19,7 +19,7 @@ var ApiError = function (error, req, parentErr) {
 		this.ip = req.ip;
 		this.url = req.url;
 		this.originalUrl = req.originalUrl;
-	}
+	};
 
 	this.stack = new Error().stack;
 	//TODO - Add inheritance of a parent error (Type Error or String)

@@ -76,3 +76,19 @@ export function userValidations(entity) {
 
   return;
 }
+
+export function postValidations(entity) {
+  if(!entity){
+    return new ApiError(errors.bad_request_400.generic_bad_format);
+  }
+
+  if(!entity.title){
+    return new ApiError(errors.bad_request_400.invalid_title);
+  }
+
+  if(!entity.text){
+    return new ApiError(errors.bad_request_400.invalid_text);
+  }
+
+  return;
+}
