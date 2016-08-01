@@ -55,6 +55,18 @@ module.exports = {
       'status' : 400,
       'message': 'Invalid phone. Phone should be between 2 and 45 characters.'
     },
+    'invalid_title'                         : {
+      'status' : 400,
+      'message': 'Invalid title. Title should be a string.'
+    },
+    'invalid_text'                          : {
+      'status' : 400,
+      'message': 'Invalid text. Text should be a string.'
+    },
+    'invalid_post_id'                       :  {
+      'status' : 400,
+      'message': 'Invalid postId.'
+    },
     //-----------------------//
     //------- User    -------//
     //-----------------------//
@@ -111,6 +123,10 @@ module.exports = {
     'user_not_found'            :{
       'status' : 404,
       'message': 'User not found.'
+    },
+    'post_not_found'            :{
+      'status' : 404,
+      'message': 'Post not found.'
     }
   },
   'method_not_allowed_405'      : {},
